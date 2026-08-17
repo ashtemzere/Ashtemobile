@@ -31,8 +31,8 @@ extension ServerInstaller {
 	
 	var pageEndpoint: URL {
 		var comps = URLComponents()
-		comps.scheme = self.getServerMethod() == 1 ? "http" : "https"
-		comps.host = sni()
+		comps.scheme = "http"
+		comps.host = "127.0.0.1"
 		comps.path = "/install"
 		comps.port = port
 		return comps.url!
