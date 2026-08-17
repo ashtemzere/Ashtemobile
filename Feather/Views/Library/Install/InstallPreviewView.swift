@@ -16,9 +16,9 @@ struct InstallPreviewView: View {
 
 	@AppStorage("AshteMobile.useShareSheetForArchiving") private var _useShareSheet: Bool = false
 	@AppStorage("AshteMobile.installationMethod") private var _installationMethod: Int = 0
-	@AppStorage("AshteMobile.serverMethod") private var _serverMethod: Int = 0
 	@State private var _isWebviewPresenting = false
 	@State private var progressTask: Task<Void, Never>?
+	@State private var installRequestWatchdog: Task<Void, Never>?
 	
 	var app: AppInfoPresentable
 	@StateObject var viewModel: InstallerStatusViewModel
@@ -59,14 +59,17 @@ struct InstallPreviewView: View {
 		.onReceive(viewModel.$status) { newStatus in
 			if _installationMethod == 0 {
 				if case .ready = newStatus {
-					if _serverMethod == 0 {
-						UIApplication.shared.open(URL(string: installer.iTunesLink)!)
-					} else if _serverMethod == 1 {
-						_isWebviewPresenting = true
-					}
+					_launchOTAInstall()
 				}
 				
-				if case .sendingPayload = newStatus, _serverMethod == 1 {
+				if case .sendingManifest = newStatus {
+					installRequestWatchdog?.cancel()
+					installRequestWatchdog = nil
+				}
+
+				if case .sendingPayload = newStatus {
+					installRequestWatchdog?.cancel()
+					installRequestWatchdog = nil
 					_isWebviewPresenting = false
 				}
 				
@@ -93,9 +96,11 @@ struct InstallPreviewView: View {
         .onAppear {
             BackgroundAudioManager.shared.start()
         }
-        .onDisappear {
+		.onDisappear {
 			progressTask?.cancel()
 			progressTask = nil
+			installRequestWatchdog?.cancel()
+			installRequestWatchdog = nil
             BackgroundAudioManager.shared.stop()
         }
 	}
@@ -195,7 +200,43 @@ struct InstallPreviewView: View {
 			}
 		}
 	}
-	
+
+	private func _launchOTAInstall() {
+		BackgroundAudioManager.shared.start()
+		guard let url = URL(string: installer.iTunesLinkExternal) else {
+			viewModel.status = .broken(NSError(
+				domain: "AshteMobile.Install",
+				code: 1,
+				userInfo: [NSLocalizedDescriptionKey: "Unable to create the AshteMobile installation link."]
+			))
+			return
+		}
+
+		UIApplication.shared.open(url) { opened in
+			guard opened else {
+				viewModel.status = .broken(NSError(
+					domain: "AshteMobile.Install",
+					code: 2,
+					userInfo: [NSLocalizedDescriptionKey: "iOS could not open the AshteMobile installation link. Please retry."]
+				))
+				return
+			}
+
+			installRequestWatchdog?.cancel()
+			installRequestWatchdog = Task {
+				try? await Task.sleep(nanoseconds: 12_000_000_000)
+				guard !Task.isCancelled else { return }
+				if case .ready = viewModel.status {
+					viewModel.status = .broken(NSError(
+						domain: "AshteMobile.Install",
+						code: 3,
+						userInfo: [NSLocalizedDescriptionKey: "iOS did not request the installation. Keep AshteMobile open and retry."]
+					))
+				}
+				}
+			}
+		}
+		
 	private func startInstallProgressPolling(
 		bundleID: String,
 		viewModel: InstallerStatusViewModel
