@@ -38,7 +38,7 @@ extension ServerInstaller {
 		return comps.url!
 	}
 	
-	var externalServerLink: String {
+	var externalManifestURL: URL {
 		var components = URLComponents()
 		components.scheme = "https"
 		components.host = "install.ashtemobile.site"
@@ -50,8 +50,7 @@ extension ServerInstaller {
 			.init(name: "fetchurl", value: payloadEndpoint.absoluteString),
 		]
 
-		return components.url!.absoluteString
-			.addingPercentEncoding(withAllowedCharacters: .alphanumerics)!
+		return components.url!
 	}
 
 	var iTunesLink: String {
@@ -59,11 +58,12 @@ extension ServerInstaller {
 	}
 	
 	var iTunesLinkExternal: String {
-		_iTunesLink(with: externalServerLink)
+		_iTunesLink(with: externalManifestURL.absoluteString)
 	}
 	
 	private func _iTunesLink(with url: String) -> String {
-		return "itms-services://?action=download-manifest&url=\(url)"
+		let encodedManifestURL = url.addingPercentEncoding(withAllowedCharacters: .alphanumerics)!
+		return "itms-services://?action=download-manifest&url=\(encodedManifestURL)"
 	}
 
 	var displayImageSmallEndpoint: URL {
