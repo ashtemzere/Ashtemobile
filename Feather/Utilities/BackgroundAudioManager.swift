@@ -10,11 +10,13 @@ import AVFoundation
 class BackgroundAudioManager {
     static let shared = BackgroundAudioManager()
     private let _engine = AVAudioEngine()
+    private var _isRunning = false
     
 
     private init() {}
 
     func start() {
+		guard !_isRunning else { return }
         do {
             let session = AVAudioSession.sharedInstance()
 
@@ -31,13 +33,16 @@ class BackgroundAudioManager {
             _engine.attach(silence)
             _engine.connect(silence, to: _engine.mainMixerNode, format: nil)
             try _engine.start()
+			_isRunning = true
         } catch {
             print("failed to start engine:", error)
         }
     }
 
     func stop() {
+		guard _isRunning else { return }
         _engine.stop()
         try? AVAudioSession.sharedInstance().setActive(false)
+		_isRunning = false
     }
 }
