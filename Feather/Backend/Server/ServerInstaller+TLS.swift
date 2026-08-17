@@ -26,15 +26,9 @@ extension ServerInstaller {
 		let app = Application(Self.env)
 		app.threadPool = .init(numberOfThreads: 1)
 		
-		if getServerMethod() != 1 {
-			if let tls = try tls() {
-				app.http.server.configuration.tlsConfiguration = tls
-			}
-		}
-		
-		app.http.server.configuration.hostname = sni()
+		app.http.server.configuration.hostname = "127.0.0.1"
 		app.http.server.configuration.tcpNoDelay = true
-		app.http.server.configuration.address = .hostname("0.0.0.0", port: port)
+		app.http.server.configuration.address = .hostname("127.0.0.1", port: port)
 		app.http.server.configuration.port = port
 		app.routes.defaultMaxBodySize = "128mb"
 		app.routes.caseInsensitive = false
