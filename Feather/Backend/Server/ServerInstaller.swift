@@ -30,7 +30,11 @@ class ServerInstaller: Identifiable, ObservableObject {
 		self.viewModel = viewModel
 		try _setup()
 		try _configureRoutes()
-		try _server?.server.start()
+		guard let server = _server else {
+			throw NSError(domain: "AshteMobile.ServerInstaller", code: 1,
+				userInfo: [NSLocalizedDescriptionKey: "Unable to start the local installation server."])
+		}
+		try server.server.start()
 		_needsShutdown = true
 	}
 	
@@ -39,7 +43,7 @@ class ServerInstaller: Identifiable, ObservableObject {
 	}
 	
 	private func _setup() throws {
-		self._server = try? setupApp(port: port)
+		self._server = try setupApp(port: port)
 	}
 		
 	private func _configureRoutes() throws {
