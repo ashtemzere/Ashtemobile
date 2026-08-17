@@ -22,8 +22,8 @@ extension ServerInstaller {
 
 	var payloadEndpoint: URL {
 		var comps = URLComponents()
-		comps.scheme = self.getServerMethod() == 1 ? "http" : "https"
-		comps.host = sni()
+		comps.scheme = "http"
+		comps.host = "127.0.0.1"
 		comps.path = "/\(id).ipa"
 		comps.port = port
 		return comps.url!
@@ -39,11 +39,19 @@ extension ServerInstaller {
 	}
 	
 	var externalServerLink: String {
-		let baseUrl = "https://api.palera.in/genPlist?bundleid=\(app.identifier!)&name=\(app.name!)&version=\(app.version!)&fetchurl=\(self.payloadEndpoint.absoluteString)"
-		let encodedBaseUrl = baseUrl.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed)!
-		let finalEncodedUrl = encodedBaseUrl.addingPercentEncoding(withAllowedCharacters: .alphanumerics)!
-		
-		return finalEncodedUrl
+		var components = URLComponents()
+		components.scheme = "https"
+		components.host = "install.ashtemobile.site"
+		components.path = "/genPlist"
+		components.queryItems = [
+			.init(name: "bundleid", value: app.identifier),
+			.init(name: "name", value: app.name),
+			.init(name: "version", value: app.version),
+			.init(name: "fetchurl", value: payloadEndpoint.absoluteString),
+		]
+
+		return components.url!.absoluteString
+			.addingPercentEncoding(withAllowedCharacters: .alphanumerics)!
 	}
 
 	var iTunesLink: String {
